@@ -13,6 +13,11 @@ def si_snr_loss(estimated, target, eps=1e-8):
     Returns:
         si_snr: [batch, n_src] - SI-SNR in dB for each sample and source
     """
+    # Truncate to same length
+    min_len = min(estimated.shape[-1], target.shape[-1])
+    estimated = estimated[..., :min_len]
+    target = target[..., :min_len]
+
     # normalize
     target = target - target.mean(dim=-1, keepdim=True)
     estimated = estimated - estimated.mean(dim=-1, keepdim=True)
@@ -68,3 +73,11 @@ def pit_si_snr_loss(estimated, target, eps=1e-8):
     best_si_snr, _ = torch.max(losses, dim=1)  # [batch]
     
     return best_si_snr
+
+
+# Truncate to same length
+def truncate_tensors(estimated, target):
+    min_len = min(estimated.shape[-1], target.shape[-1])
+    estimated = estimated[..., :min_len]
+    target = target[..., :min_len]
+    return estimated, target

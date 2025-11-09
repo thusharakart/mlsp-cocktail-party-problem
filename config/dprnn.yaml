@@ -1,0 +1,29 @@
+run:
+  seed: 42
+  device: null  # auto-select (cuda/mps/cpu)
+
+model:
+  num_sources: 2
+  enc_dim: 256          # encoder conv output channels (E)
+  feature_dim: 64       # DPRNN bottleneck feature dim (N)
+  hidden_dim: 128       # hidden size in RNN blocks (H)
+  layers: 6             # number of stacked dual-path blocks (D)
+  segment_size: 250     # chunk size for dual-path segmentation (K)
+  win_len: 8            # encoder filter length W (samples)
+  rnn_type: LSTM        # RNN cell type
+
+training:
+  epochs: 50
+  early_stopping_patience: 10
+  learning_rate: 3e-3
+  weight_decay: 1e-4
+  gradient_clip_norm: 5.0
+  scheduler: cosine
+  scheduler_params:
+    step:
+      step_size: 10
+      gamma: 0.1
+    reduce_on_plateau:
+      factor: 0.5
+      patience: 5
+    cosine: null
