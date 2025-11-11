@@ -15,12 +15,12 @@ model:
 
 # training hyperparameters
 training:
-  epochs: 50
+  epochs: 300
   early_stopping_patience: 10
-  learning_rate: 3e-3
-  weight_decay: 1e-4
+  learning_rate: 0.001
+  weight_decay: 0.00005
   gradient_clip_norm: 5.0
-  scheduler: cosine   # options: none, step, cosine, reduce_on_plateau
+  scheduler: reduce_on_plateau  # options: none, step, cosine, reduce_on_plateau
   scheduler_params:
     step:
       step_size: 10

@@ -1,0 +1,29 @@
+{
+  "loss": -5.025329844156901,
+  "si_snr": 5.025329844156901,
+  "checkpoint": "output/models/bilstm/bilstm_20251101_13295a/best_model.pth",
+  "split": "test",
+  "model_config": {
+    "num_layers": 2,
+    "hidden_size": 512,
+    "dropout": 0.3,
+    "n_fft": 1024,
+    "hop_length": 256
+  },
+  "dataset_config": {
+    "sample_rate": "16k",
+    "n_src": 2,
+    "mode": "min",
+    "mixture_type": "mix_clean",
+    "segment_length_train": 64000,
+    "segment_length_val": 64000,
+    "segment_length_test": null,
+    "return_speaker_info": false,
+    "return_metrics": false
+  },
+  "run_config": {
+    "seed": 42,
+    "device": null,
+    "run_id": "bilstm_20251101_13295a"
+  }
+}
