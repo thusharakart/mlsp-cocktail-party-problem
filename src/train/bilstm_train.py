@@ -1,6 +1,7 @@
 import argparse
 import json
 import yaml
+import csv
 from pathlib import Path
 import torch
 import torch.optim as optim
@@ -12,7 +13,7 @@ from src.models.bilstm import BiLSTMSeparator
 from src.utils.logger import setup_logger
 from src.data.librimix_dataloader import create_train_val_test_loaders
 from src.utils.train_utils import (
-    set_training_device,
+    set_device,
     save_checkpoint,
     load_checkpoint,
     set_seed,
@@ -190,7 +191,7 @@ def main():
         training_config = full_training_config['training']
         
         run_id = full_training_config.get('run', {}).get('run_id', 'resumed_run')
-        
+
         logger.info(f"Loaded config from checkpoint")
         logger.info(f"Resuming run: {run_id}")
         logger.info(f"Using existing directory: {model_dir}")
@@ -225,10 +226,10 @@ def main():
     logger.debug("Training config:")
     for key, value in training_config.items():
         logger.debug(f"  {key}: {value}")
-
+    
     # set seed
     set_seed(logger, run_config['seed'])
-    
+
     # setup tensorboard
     writer = None
     if args.tensorboard:
@@ -265,7 +266,7 @@ def main():
     num_params = count_parameters(model)
     logger.info(f"Model parameters: {num_params:,}")
 
-    model, device = set_training_device(logger, model, device=run_config['device'])
+    model, device = set_device(logger, model, device=run_config['device'])
     if device.type == 'mps':
         logger.info("MPS HYBRID MODE ENABLED")
         logger.info("STFT and ISFT computation: CPU")
@@ -293,7 +294,7 @@ def main():
     elif scheduler == "reduce_on_plateau":
         factor = scheduler_config['factor']
         patience = scheduler_config['patience']
-        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=factor, patience=patience, verbose=True)
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=factor, patience=patience)
         logger.debug(f"Scheduler: ReduceLROnPlateau ({patience=})")
     else:
         scheduler = None
@@ -309,6 +310,14 @@ def main():
         )
         logger.info(f"Resuming from epoch {start_epoch}, best SI-SNR: {best_si_snr:.4f} dB")
 
+    ### SETUP TRAINING LOGS
+    logs_dir = Path(model_dir) / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    metrics_log_file = logs_dir / "training_metrics.csv"
+
+    # create CSV header if file doesn't exist
+    metrics_written = metrics_log_file.exists()
+
     ### TRAINING LOOP
     logger.info("="*50)
     logger.info("Starting training...")
@@ -318,6 +327,8 @@ def main():
         logger.info(f"Checkpointing: saving every {args.save_every} epochs + best model")
     else:
         logger.info("Checkpointing: only saving best model")
+
+    logger.info(f"Training metrics log: {metrics_log_file}")
 
     patience_counter = 0
     global_step = 0  # track total batches across epochs
@@ -356,13 +367,6 @@ def main():
                 'val': val_metrics['loss']
             }, epoch)
 
-        # update scheduler
-        if scheduler is not None:
-            if isinstance(scheduler, ReduceLROnPlateau):
-                scheduler.step(val_metrics["loss"])
-            else:
-                scheduler.step()
-
         # check if best model
         is_best = val_metrics["si_snr"] > best_si_snr
         if is_best:
@@ -371,6 +375,36 @@ def main():
             logger.info(f"New best model (SI-SNR: {best_si_snr:.4f} dB)")
         else:
             patience_counter += 1
+
+        # log metrics to CSV
+        with open(metrics_log_file, 'a', newline='') as f:
+            writer_csv = csv.DictWriter(f, fieldnames=[
+                'epoch', 'train_loss', 'val_loss', 'val_si_snr', 'best_si_snr',
+                'is_best', 'learning_rate', 'time_train', 'time_val'
+            ])
+
+            # write header on first epoch
+            if epoch == start_epoch:
+                writer_csv.writeheader()
+
+            writer_csv.writerow({
+                'epoch': epoch,
+                'train_loss': f"{train_metrics['loss']:.6f}",
+                'val_loss': f"{val_metrics['loss']:.6f}",
+                'val_si_snr': f"{val_metrics['si_snr']:.6f}",
+                'best_si_snr': f"{best_si_snr:.6f}",
+                'is_best': is_best,
+                'learning_rate': f"{current_lr:.6e}",
+                'time_train': f"{tdiff_train:.2f}",
+                'time_val': f"{tdiff_val:.2f}",
+            })
+
+        # update scheduler
+        if scheduler is not None:
+            if isinstance(scheduler, ReduceLROnPlateau):
+                scheduler.step(val_metrics["loss"])
+            else:
+                scheduler.step()
 
         # save checkpoint (only if enabled OR if best model)
         should_save_periodic = args.save_checkpoints and (epoch % args.save_every == 0)

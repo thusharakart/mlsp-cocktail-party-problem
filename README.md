@@ -1,6 +1,6 @@
 # mlsp-cocktail-party-problem
 
-Project in Machine Learning for Signal Processing. Goal: to solve the cocktail party problem for 2+ speaker mixed audio signals, evaluating various simple methods (NMF) and more advanced models.
+Project in Machine Learning for Signal Processing. Goal: to solve the cocktail party problem for 2+ speaker mixed audio signals, evaluating various simple methods and more advanced models.
 
 
 ## Setup
@@ -101,10 +101,11 @@ This writes `metrics_dev.json` (or `metrics_test.json`) inside the run directory
 - `segment_size` controls chunk length for dual-path processing; larger improves performance but increases memory.
 - SI-SNR is maximized; training loss is `-SI-SNR`.
 - For large batch sizes on GPU, consider mixed precision (future enhancement).
+Up to individual model group members depending on their model.
 
 
 ## Evaluating and testing models
-
+Up to individual model group members depending on their model.
 
 
 

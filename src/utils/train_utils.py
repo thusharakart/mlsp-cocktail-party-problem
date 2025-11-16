@@ -33,7 +33,7 @@ def get_device(logger, device=None):
     return device
 
 
-def set_training_device(logger, model, device=None):
+def set_device(logger, model, device=None):
     """Move model to device"""
     device = get_device(logger, device)
     model = model.to(device)
